@@ -21,6 +21,7 @@ export const io = new Server(server, {
       "http://localhost:5173",
       "http://localhost:5174",
       "https://chat-app-omega-cyan.vercel.app",
+      "https://chat-arsj7f3bo-rehnoor-aulakhs-projects.vercel.app",
     ],
     credentials: true,
   },
