@@ -13,7 +13,7 @@ const server = http.createServer(app);
 
 // Define custom CORS middleware to allow all origins + headers
 const corsOptions = {
-  origin: (origin, callback) => callback(null, true), // Allow all origins
+  origin: true, // Allow all origins
   credentials: true,
   allowedHeaders: [
     "Content-Type",
