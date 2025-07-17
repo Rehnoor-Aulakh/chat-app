@@ -7,24 +7,32 @@ import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
 
+// Create Express app using HTTP server
 const app = express();
 const server = http.createServer(app);
 
-// ⚠️ Allow all origins (for development/testing)
-app.use(
-  cors({
-    origin: true,        // Allow any origin
-    credentials: true,   // Allow cookies and headers
-  })
-);
+// Define custom CORS middleware to allow all origins + headers
+const corsOptions = {
+  origin: (origin, callback) => callback(null, true), // Allow all origins
+  credentials: true,
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "token", // 🔑 Allow custom token header
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+};
+
+app.use(cors(corsOptions)); // Apply CORS globally
+app.options("*", cors(corsOptions)); // Handle preflight manually (optional)
 
 // Parse JSON payloads
 app.use(express.json({ limit: "10mb" }));
 
-// Initialize Socket.IO server
+// Initialize socket.io server
 export const io = new Server(server, {
   cors: {
-    origin: true,
+    origin: true, // Reflects the request origin
     credentials: true,
   },
 });
@@ -32,29 +40,33 @@ export const io = new Server(server, {
 // Online users map
 export const userSocketMap = {};
 
-// Socket.io logic
+// Socket.io connection handler
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
-  console.log("User connected:", userId);
+  console.log("User connected", userId);
 
   if (userId) userSocketMap[userId] = socket.id;
+
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", userId);
+    console.log("User disconnected", userId);
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 });
 
-// Ensure DB connection on each request
+// Middleware to ensure DB connection for each request
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (error) {
     console.error("Database connection failed:", error);
-    res.status(500).json({ success: false, message: "Database connection failed" });
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+    });
   }
 });
 
@@ -63,7 +75,7 @@ app.use("/api/status", (req, res) => res.send("Server is live"));
 app.use("/api/auth", userRouter);
 app.use("/api/messages", messageRouter);
 
-// Start server locally
+// Start server locally (non-production)
 const startServer = async () => {
   try {
     await connectDB();
@@ -71,15 +83,19 @@ const startServer = async () => {
 
     if (process.env.NODE_ENV !== "production") {
       const PORT = process.env.PORT || 5002;
-      server.listen(PORT, () => console.log("Server running on PORT:", PORT));
+      server.listen(PORT, () =>
+        console.log("Server is running on PORT: " + PORT)
+      );
     }
   } catch (error) {
     console.error("Failed to connect to database:", error);
-    if (process.env.NODE_ENV !== "production") process.exit(1);
+    if (process.env.NODE_ENV !== "production") {
+      process.exit(1);
+    }
   }
 };
 
-// Vercel handler
+// Handle serverless behavior (Vercel)
 if (process.env.NODE_ENV === "production") {
   connectDB().catch(console.error);
 } else {
