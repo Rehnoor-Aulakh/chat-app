@@ -62,6 +62,20 @@ app.use(
   })
 );
 
+// Middleware to ensure database connection for serverless functions
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("Database connection failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Database connection failed",
+    });
+  }
+});
+
 // Routes setup
 app.use("/api/status", (req, res) => res.send("Server is live"));
 app.use("/api/auth", userRouter);
@@ -72,18 +86,30 @@ const startServer = async () => {
   try {
     await connectDB();
     console.log("Database connected");
-    
+
     if (process.env.NODE_ENV !== "production") {
       const PORT = process.env.PORT || 5002;
-      server.listen(PORT, () => console.log("Server is running on PORT: " + PORT));
+      server.listen(PORT, () =>
+        console.log("Server is running on PORT: " + PORT)
+      );
     }
   } catch (error) {
     console.error("Failed to connect to database:", error);
-    process.exit(1);
+    // Don't exit process in serverless environment
+    if (process.env.NODE_ENV !== "production") {
+      process.exit(1);
+    }
   }
 };
 
-startServer();
+// For Vercel serverless functions, we need to ensure DB connection on each request
+if (process.env.NODE_ENV === "production") {
+  // Connect to DB immediately for serverless
+  connectDB().catch(console.error);
+} else {
+  // For local development, use the startServer function
+  startServer();
+}
 
 //Export server for vercel
 export default server;
