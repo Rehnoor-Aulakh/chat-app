@@ -19,8 +19,13 @@ const corsOptions = {
     "Content-Type",
     "Authorization",
     "token", // 🔑 Allow custom token header
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers",
   ],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
 };
 
 app.use(cors(corsOptions)); // Apply CORS globally
