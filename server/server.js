@@ -52,7 +52,14 @@ io.on("connection", (socket) => {
 //creating middlewares
 app.use(express.json({ limit: "10mb" }));
 app.use(
-  cors();
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://chat-app-omega-cyan.vercel.app",
+    ],
+    credentials: true,
+  })
 );
 
 // Routes setup
@@ -60,14 +67,23 @@ app.use("/api/status", (req, res) => res.send("Server is live"));
 app.use("/api/auth", userRouter);
 app.use("/api/messages", messageRouter);
 
-//connect to mongodb
+//connect to mongodb and start server
+const startServer = async () => {
+  try {
+    await connectDB();
+    console.log("Database connected");
+    
+    if (process.env.NODE_ENV !== "production") {
+      const PORT = process.env.PORT || 5002;
+      server.listen(PORT, () => console.log("Server is running on PORT: " + PORT));
+    }
+  } catch (error) {
+    console.error("Failed to connect to database:", error);
+    process.exit(1);
+  }
+};
 
-await connectDB();
-if (process.env.NODE_ENV !== "production") {
-  const PORT = process.env.PORT || 5002;
-
-  server.listen(PORT, () => console.log("Server is running on PORT: " + PORT));
-}
+startServer();
 
 //Export server for vercel
 export default server;
