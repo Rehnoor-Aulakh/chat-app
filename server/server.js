@@ -52,14 +52,7 @@ io.on("connection", (socket) => {
 //creating middlewares
 app.use(express.json({ limit: "10mb" }));
 app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://chat-app-omega-cyan.vercel.app",
-    ],
-    credentials: true,
-  })
+  cors();
 );
 
 // Routes setup
