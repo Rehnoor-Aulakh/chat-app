@@ -12,18 +12,17 @@ const app = express();
 const server = http.createServer(app);
 
 // Define custom CORS middleware to allow all origins + headers
-const corsOptions = {
-  origin: (origin, callback) => callback(null, true), // Allow all origins
-  credentials: true,
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "token", // 🔑 Allow custom token header
-  ],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-};
-
-app.use(cors(corsOptions)); // Apply CORS globally
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://chat-arsj7f3bo-rehnoor-aulakhs-projects.vercel.app",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "token"], // <-- allow 'token' header
+    credentials: true,
+  })
+);
 app.options("*", cors(corsOptions)); // Handle preflight manually (optional)
 
 // Parse JSON payloads
