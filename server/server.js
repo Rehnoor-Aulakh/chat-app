@@ -7,72 +7,54 @@ import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
 
-// Create Express app using HTTP server
 const app = express();
 const server = http.createServer(app);
 
-// Allowed origins
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://chat-app-omega-cyan.vercel.app",
-  "https://chat-arsj7f3bo-rehnoor-aulakhs-projects.vercel.app" // ✅ Your current Vercel frontend
-];
-
-// Apply CORS using cors package (handles preflight automatically)
+// ⚠️ Allow all origins (for development/testing)
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
+    origin: true,        // Allow any origin
+    credentials: true,   // Allow cookies and headers
   })
 );
 
 // Parse JSON payloads
 app.use(express.json({ limit: "10mb" }));
 
-// Initialize socket.io server
+// Initialize Socket.IO server
 export const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: true,
     credentials: true,
   },
 });
 
 // Online users map
-export const userSocketMap = {}; // { userId: socketId }
+export const userSocketMap = {};
 
-// Socket.io connection handler
+// Socket.io logic
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
-  console.log("User connected", userId);
+  console.log("User connected:", userId);
 
   if (userId) userSocketMap[userId] = socket.id;
-
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("disconnect", () => {
-    console.log("User disconnected", userId);
+    console.log("User disconnected:", userId);
     delete userSocketMap[userId];
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 });
 
-// Middleware to ensure DB connection for each request
+// Ensure DB connection on each request
 app.use(async (req, res, next) => {
   try {
     await connectDB();
     next();
   } catch (error) {
     console.error("Database connection failed:", error);
-    res.status(500).json({
-      success: false,
-      message: "Database connection failed",
-    });
+    res.status(500).json({ success: false, message: "Database connection failed" });
   }
 });
 
@@ -81,7 +63,7 @@ app.use("/api/status", (req, res) => res.send("Server is live"));
 app.use("/api/auth", userRouter);
 app.use("/api/messages", messageRouter);
 
-// Start server locally (non-production)
+// Start server locally
 const startServer = async () => {
   try {
     await connectDB();
@@ -89,19 +71,15 @@ const startServer = async () => {
 
     if (process.env.NODE_ENV !== "production") {
       const PORT = process.env.PORT || 5002;
-      server.listen(PORT, () =>
-        console.log("Server is running on PORT: " + PORT)
-      );
+      server.listen(PORT, () => console.log("Server running on PORT:", PORT));
     }
   } catch (error) {
     console.error("Failed to connect to database:", error);
-    if (process.env.NODE_ENV !== "production") {
-      process.exit(1);
-    }
+    if (process.env.NODE_ENV !== "production") process.exit(1);
   }
 };
 
-// Handle serverless behavior (Vercel)
+// Vercel handler
 if (process.env.NODE_ENV === "production") {
   connectDB().catch(console.error);
 } else {
